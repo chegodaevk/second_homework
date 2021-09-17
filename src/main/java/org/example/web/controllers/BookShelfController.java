@@ -21,6 +21,7 @@ import org.example.web.dto.BookAuthorToRemove;
 import org.example.web.dto.BookIdToRemove;
 import org.example.web.dto.BookSizeToRemove;
 import org.example.web.dto.BookTitleToRemove;
+import org.example.web.dto.NameFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.http.MediaType;
@@ -29,6 +30,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -163,8 +165,6 @@ public class BookShelfController {
 			stream.close();
 			
 			logger.info("new file saved at: " + serverFile.getAbsolutePath());
-//			String str = String.format("%s%s%s", System.getProperty("catalina.home"), "external_uploads", File.separator + name);
-//			logger.info(str);
 			return "redirect:/books/shelf";
 		} else {
 			throw new BookShelfUploadFileException("do not specify the file to upload");
@@ -177,23 +177,24 @@ public class BookShelfController {
 		return "errors/500";		
 	}
 	
-	@GetMapping("/download/{fileName}")
-	public void downloadFile(@PathVariable("fileName") String fileName, HttpServletResponse response) throws IOException {
-		response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-		response.addHeader("Content-Disposition", "attachment;filename=" + fileName);
+	@GetMapping("/download/{file_name}")
+	public void getFile(@PathVariable("file_name") String fileName, HttpServletResponse response, @ModelAttribute("nameFile")NameFile nameFile) {
+		nameFile.setName(fileName);
 		String rootPath = System.getProperty("catalina.home");
 		File dir = new File(rootPath + File.separator + "external_uploads");
 		File serverFile = new File(dir.getAbsolutePath() + File.separator + fileName);
 		logger.info("new file saved at: " + serverFile.getAbsolutePath());
-		Path file = Paths.get(String.format("%s%s%s", serverFile.getAbsolutePath()));
-        try
-        {
-            Files.copy(file, response.getOutputStream());
-            response.getOutputStream().flush();
-        }
-        catch (IOException ex) {
-            ex.printStackTrace();
-        }
+		Path file = Paths.get(serverFile.getAbsolutePath());
+	    if (Files.exists(file)){
+	    	response.setHeader("Content-disposition", "attachment;filename=" + fileName);
+	    	response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+	    	try {
+	    		Files.copy(file, response.getOutputStream());
+	    		response.getOutputStream().flush();
+	    	} catch (IOException e) {
+	    		throw new RuntimeException("IOError writing file to output stream");
+	    	}
+	    }
 	}
 	
 	@PostMapping("/sortingByAuthors")

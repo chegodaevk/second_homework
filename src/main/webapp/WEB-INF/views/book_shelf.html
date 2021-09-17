@@ -123,14 +123,14 @@
 				</tr>
 			</table>
 		</form>
-		
-		<form method="get" th:action="@{/books/download/{fileName}}" enctype="multipart/form-data" th:object="${nameFile}">		
+				
 		<table>
 			<tr th:each="nameFile : ${fileList}">
-				<td><a th:href="@{/books/download/{fileName}(fileName=${nameFile.name})}" th:text="${nameFile.name}"></a></td>
+			<form method="get" th:action="@{/books/download/{file_name}(file_name=${nameFile.getName})}" th:object="${nameFile}" enctype="multipart/form-data">
+			<td><a th:href="@{/books/download/{file_name}(file_name=${nameFile.getName})}" th:text="${nameFile.name}"></a></td>
+			</form>
 			</tr>
 		</table>
-		</form>
 		
 		<table id="books">			
 			<tr>
