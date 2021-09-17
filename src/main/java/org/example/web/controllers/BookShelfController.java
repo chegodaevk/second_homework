@@ -3,8 +3,13 @@ package org.example.web.controllers;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
 import org.apache.log4j.Logger;
@@ -18,11 +23,13 @@ import org.example.web.dto.BookSizeToRemove;
 import org.example.web.dto.BookTitleToRemove;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -49,6 +56,7 @@ public class BookShelfController {
 		model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 		model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 		model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+		model.addAttribute("fileList", bookService.getAllFile());
 		model.addAttribute("bookList", bookService.getAllBooks());
 		return "book_shelf";
 	}
@@ -61,6 +69,7 @@ public class BookShelfController {
 			model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 			model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 			model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+			model.addAttribute("fileList", bookService.getAllFile());
 			model.addAttribute("bookList", bookService.getAllBooks());
 			return "book_shelf";			
 		} else {
@@ -77,6 +86,7 @@ public class BookShelfController {
 			model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 			model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 			model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+			model.addAttribute("fileList", bookService.getAllFile());
 			model.addAttribute("bookList", bookService.getAllBooks());
 			return "book_shelf";
 		} else {
@@ -92,6 +102,7 @@ public class BookShelfController {
 			model.addAttribute("bookIdToRemove", new BookIdToRemove());
 			model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 			model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+			model.addAttribute("fileList", bookService.getAllFile());
 			model.addAttribute("bookList", bookService.getAllBooks());
 			return "book_shelf";
 		} else {
@@ -107,6 +118,7 @@ public class BookShelfController {
 			model.addAttribute("bookIdToRemove", new BookIdToRemove());
 			model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 			model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+			model.addAttribute("fileList", bookService.getAllFile());
 			model.addAttribute("bookList", bookService.getAllBooks());
 			return "book_shelf";			
 		} else {
@@ -122,6 +134,7 @@ public class BookShelfController {
 			model.addAttribute("bookIdToRemove", new BookIdToRemove());
 			model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 			model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
+			model.addAttribute("fileList", bookService.getAllFile());
 			model.addAttribute("bookList", bookService.getAllBooks());
 			return "book_shelf";			
 		} else {
@@ -135,6 +148,8 @@ public class BookShelfController {
 	public String uploadFile(@RequestParam("file") MultipartFile file) throws Exception, BookShelfUploadFileException {
 		if(!file.isEmpty()) {
 			String name = file.getOriginalFilename();
+			bookService.saveNameFile(name);
+			
 			byte[] bytes = file.getBytes();
 			
 			String rootPath = System.getProperty("catalina.home");
@@ -148,7 +163,8 @@ public class BookShelfController {
 			stream.close();
 			
 			logger.info("new file saved at: " + serverFile.getAbsolutePath());
-			
+//			String str = String.format("%s%s%s", System.getProperty("catalina.home"), "external_uploads", File.separator + name);
+//			logger.info(str);
 			return "redirect:/books/shelf";
 		} else {
 			throw new BookShelfUploadFileException("do not specify the file to upload");
@@ -161,33 +177,23 @@ public class BookShelfController {
 		return "errors/500";		
 	}
 	
-	@PostMapping("/download")
-	public String downloadFile(@RequestParam("file") MultipartFile file) throws Exception, BookShelfDownloadFileException {
-		if(!file.isEmpty()) {
-			String name = file.getOriginalFilename();
-			byte[] bytes = file.getBytes();			
-			String rootPath = System.getProperty("user.home");
-			File dir = new File(rootPath + File.separator + "Downloads");
-			if(!dir.exists()) {
-				dir.mkdirs();
-			}
-			File serverFile = new File(dir.getAbsolutePath() + File.separator + name);
-			BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(serverFile));
-			stream.write(bytes);
-			stream.close();
-			
-			logger.info("new file saved at: " + serverFile.getAbsolutePath());
-			
-			return "redirect:/books/shelf";
-		} else {
-			throw new BookShelfUploadFileException("do not specify the file to download");
-		}	
-	}
-	
-	@ExceptionHandler(BookShelfDownloadFileException.class)
-	public String handleError(Model model, BookShelfDownloadFileException exception) {
-		model.addAttribute("errorMessage", exception.getMessage());
-		return "errors/500";		
+	@GetMapping("/download/{fileName}")
+	public void downloadFile(@PathVariable("fileName") String fileName, HttpServletResponse response) throws IOException {
+		response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+		response.addHeader("Content-Disposition", "attachment;filename=" + fileName);
+		String rootPath = System.getProperty("catalina.home");
+		File dir = new File(rootPath + File.separator + "external_uploads");
+		File serverFile = new File(dir.getAbsolutePath() + File.separator + fileName);
+		logger.info("new file saved at: " + serverFile.getAbsolutePath());
+		Path file = Paths.get(String.format("%s%s%s", serverFile.getAbsolutePath()));
+        try
+        {
+            Files.copy(file, response.getOutputStream());
+            response.getOutputStream().flush();
+        }
+        catch (IOException ex) {
+            ex.printStackTrace();
+        }
 	}
 	
 	@PostMapping("/sortingByAuthors")
@@ -197,6 +203,7 @@ public class BookShelfController {
 		model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 		model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 		model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+		model.addAttribute("fileList", bookService.getAllFile());
 		model.addAttribute("bookList", bookService.sortingAuthors());
 		return "book_shelf";			
 	}
@@ -208,6 +215,7 @@ public class BookShelfController {
 		model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 		model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 		model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+		model.addAttribute("fileList", bookService.getAllFile());
 		model.addAttribute("bookList", bookService.sortingTitles());
 		return "book_shelf";			
 	}
@@ -219,6 +227,7 @@ public class BookShelfController {
 		model.addAttribute("bookAuthorToRemove", new BookAuthorToRemove());
 		model.addAttribute("bookTitleToRemove", new BookTitleToRemove());
 		model.addAttribute("bookSizeToRemove", new BookSizeToRemove());
+		model.addAttribute("fileList", bookService.getAllFile());
 		model.addAttribute("bookList", bookService.sortingSizes());
 		return "book_shelf";			
 	}

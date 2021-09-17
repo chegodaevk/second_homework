@@ -124,20 +124,15 @@
 			</table>
 		</form>
 		
-		<form method="post" th:action="@{/books/download}" enctype="multipart/form-data">
-			<table>
-				<tr>
-					<td>
-						<input type="file" name="file">
-					</td>
-					<td>
-						<input type="submit" value="Download">
-					</td>
-				</tr>
-			</table>
+		<form method="get" th:action="@{/books/download/{fileName}}" enctype="multipart/form-data" th:object="${nameFile}">		
+		<table>
+			<tr th:each="nameFile : ${fileList}">
+				<td><a th:href="@{/books/download/{fileName}(fileName=${nameFile.name})}" th:text="${nameFile.name}"></a></td>
+			</tr>
+		</table>
 		</form>
 		
-		<table id="books">
+		<table id="books">			
 			<tr>
 				<td></td>
 				<form method="post" th:action="@{/books/sortingByAuthors}">

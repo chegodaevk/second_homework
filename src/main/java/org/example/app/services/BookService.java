@@ -2,8 +2,8 @@ package org.example.app.services;
 
 import java.util.List;
 
-import org.apache.log4j.Logger;
 import org.example.web.dto.Book;
+import org.example.web.dto.NameFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,11 +11,12 @@ import org.springframework.stereotype.Service;
 public class BookService {
 	
 	private final ProjectRepository<Book> bookRepo;
-	private final Logger logger = Logger.getLogger(BookService.class);
+	private final DataNameFile dataNameFile;
 	
 	@Autowired
-	public BookService(ProjectRepository<Book> bookRepo) {
+	public BookService(ProjectRepository<Book> bookRepo, DataNameFile dataNameFile) {
 		this.bookRepo = bookRepo;
+		this.dataNameFile = dataNameFile;
 	}
 
 	public List<Book> getAllBooks() {		
@@ -28,16 +29,8 @@ public class BookService {
 
 	public boolean removeBookById(Integer bookIdToRemove) {
 		return bookRepo.removeItemById(bookIdToRemove);
-	}
-	
-	private void defaultInit() {
-		logger.info("default INIT in book service");
-	}
-	
-	private void defaultDestroy() {
-		logger.info("default DESTROY in book service");
-	}
-			
+	}	
+				
 	public void deleteDataByAuthor(String authorBook) {
 		bookRepo.deleteBooksByAuthor(authorBook);
 	}
@@ -60,5 +53,13 @@ public class BookService {
 
 	public List<Book> sortingSizes() {
 		return bookRepo.sortSizes();		
+	}
+	
+	public void saveNameFile(String name) {
+		dataNameFile.addNameFile(name);		
+	}
+	
+	public List<NameFile> getAllFile() {
+		return dataNameFile.retreiveAll();
 	}	
 }
